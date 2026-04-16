@@ -29,28 +29,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${jetbrains.variable}`}>
-        <nav className="nav">
-          <div className="nav-inner">
-            <a href="/" className="nav-brand">
-              <div className="nav-brand-icon">⚕</div>
-              <div className="nav-brand-text">
-                ICD <span>Decoder</span>
-              </div>
-            </a>
-            <div className="nav-links">
-              <a href="/" className="nav-link" id="nav-predict">
-                🔍 Predict
-              </a>
-              <a href="/review" className="nav-link" id="nav-review">
-                👁 Review
-                <span className="badge" id="review-badge"></span>
-              </a>
-              <a href="/audit" className="nav-link" id="nav-audit">
-                📋 Audit Log
-              </a>
-            </div>
-          </div>
-        </nav>
         {children}
       </body>
     </html>
