@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignIn() {
-  const [showPassword, setShowPassword] = useState(false);
+export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,30 +16,63 @@ export default function SignIn() {
 
     const formData = new FormData(e.target as HTMLFormElement);
     const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email,
-      password,
-    });
+      {
+        redirectTo: `${window.location.origin}/auth/callback?next=/predict`,
+      }
+    );
 
-    if (authError) {
-      setError(authError.message);
+    if (resetError) {
+      setError(resetError.message);
       setLoading(false);
       return;
     }
 
-    router.push("/predict");
-    router.refresh();
+    setSuccess(true);
+    setLoading(false);
   };
+
+  if (success) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <h1>Check Your Email</h1>
+            <p>
+              We&apos;ve sent a password reset link to your email address.
+              Click the link to set a new password.
+            </p>
+          </div>
+          <div
+            style={{
+              background: "rgba(34, 197, 94, 0.1)",
+              border: "1px solid rgba(34, 197, 94, 0.3)",
+              borderRadius: "8px",
+              padding: "16px",
+              color: "#4ade80",
+              fontSize: "0.875rem",
+              textAlign: "center",
+            }}
+          >
+            ✅ Password reset email sent! Check your inbox and spam folder.
+          </div>
+          <div className="auth-footer" style={{ marginTop: "1.5rem" }}>
+            Remember your password? <Link href="/sign-in">Sign in</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Welcome Back</h1>
-          <p>Sign in to your ICD Decoder account</p>
+          <h1>Reset Password</h1>
+          <p>Enter your email and we&apos;ll send you a reset link</p>
         </div>
 
         {error && (
@@ -76,49 +107,18 @@ export default function SignIn() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <span className="input-icon" aria-hidden="true">🔒</span>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                className="auth-input"
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? "👓" : "🕶"}
-              </button>
-            </div>
-          </div>
-
-          <div className="auth-options">
-            <label className="auth-checkbox">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-            <Link href="/forgot-password" className="auth-link">Forgot password?</Link>
-          </div>
-
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: "100%", padding: "14px" }}
+            style={{ width: "100%", padding: "14px", marginTop: "0.5rem" }}
             disabled={loading}
           >
-            {loading ? <span className="loading-spinner-sm"></span> : "Sign In"}
+            {loading ? <span className="loading-spinner-sm"></span> : "Send Reset Link"}
           </button>
         </form>
 
         <div className="auth-footer">
-          Don&apos;t have an account? <Link href="/sign-up">Sign up</Link>
+          Remember your password? <Link href="/sign-in">Sign in</Link>
         </div>
       </div>
     </div>

@@ -46,11 +46,11 @@ def load_model():
         with open(os.path.join(model_dir, "code_metadata.json"), 'r') as f:
             code_metadata = json.load(f)
         
-        print("✓ Model loaded successfully")
+        print("[OK] Model loaded successfully")
         print(f"  Classes: {len(mlb.classes_)}")
         return True
     except Exception as e:
-        print(f"✗ Failed to load model: {e}")
+        print(f"[ERROR] Failed to load model: {e}")
         return False
 
 
@@ -224,6 +224,7 @@ def predict():
         "timestamp": datetime.now().isoformat(),
         "routing": result['routing'],
         "codes": [p['code'] for p in result['predictions']],
+        "code_details": [{"code": p['code'], "description": p['description'], "confidence": p['confidence']} for p in result['predictions']],
         "user": "system",
         "details": f"Document type: {doc_type}, {len(result['predictions'])} codes predicted"
     })
@@ -268,28 +269,50 @@ def submit_review(prediction_id):
     record['review_changes'] = changes
     record['reviewed_at'] = datetime.now().isoformat()
     
-    if action == 'modify':
-        # Apply changes to predictions
-        added = data.get('added_codes', [])
+    if action == 'approve':
+        # APPROVE: Keep only the highest-confidence code
+        sorted_preds = sorted(record['predictions'], key=lambda p: -p['confidence'])
+        top_code = sorted_preds[0] if sorted_preds else None
+        record['predictions'] = [top_code] if top_code else []
+        audit_detail = f"Approved top code: {top_code['code']} - {top_code['description']} ({top_code['confidence']:.1%})" if top_code else "No codes"
+    
+    elif action == 'reject':
+        # REJECT: Discard the entire prediction (all codes removed)
+        rejected_codes = [f"{p['code']} ({p['description']})" for p in record['predictions']]
+        audit_detail = f"Rejected entire prediction. Discarded codes: {', '.join(rejected_codes)}"
+        record['predictions'] = []
+    
+    elif action == 'modify':
+        # MODIFY: User selects specific codes + optionally adds custom ones
         removed = data.get('removed_codes', [])
-        for code_info in added:
-            record['predictions'].append({
-                "code": code_info['code'],
-                "description": code_info.get('description', ''),
-                "confidence": 1.0,
-                "evidence_spans": [],
-                "source": "human_reviewer"
-            })
+        added = data.get('added_codes', [])
+        
+        # Remove unselected codes
         record['predictions'] = [
             p for p in record['predictions'] 
             if p['code'] not in removed
         ]
+        
+        # Add custom codes from reviewer
+        for code_info in added:
+            record['predictions'].append({
+                "code": code_info['code'],
+                "description": code_info.get('description', 'Manually added'),
+                "confidence": 1.0,
+                "evidence_spans": [],
+                "source": "human_reviewer"
+            })
+        
+        kept = [f"{p['code']} ({p['description']})" for p in record['predictions']]
+        audit_detail = f"Modified: kept {len(record['predictions'])} codes [{', '.join(kept)}], removed {len(removed)}"
+    else:
+        audit_detail = f"Action: {action}"
     
-    # Move to approved
+    # Move to approved (or rejected archive)
     approved_predictions.append(record)
     review_queue.remove(record)
     
-    # Audit log
+    # Audit log — include disease name + ICD code for traceability
     audit_log.append({
         "id": str(uuid.uuid4())[:8],
         "prediction_id": prediction_id,
@@ -297,8 +320,9 @@ def submit_review(prediction_id):
         "timestamp": datetime.now().isoformat(),
         "routing": "reviewed",
         "codes": [p['code'] for p in record['predictions']],
+        "code_details": [{"code": p['code'], "description": p['description'], "confidence": p['confidence']} for p in record['predictions']],
         "user": reviewer,
-        "details": f"Action: {action}, Changes: {len(changes)}"
+        "details": audit_detail
     })
     
     return jsonify({"success": True, "record": record})
