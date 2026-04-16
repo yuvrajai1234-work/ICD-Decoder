@@ -24,6 +24,16 @@ classifier = None
 mlb = None
 code_metadata = {}
 
+def init_app():
+    """Initialize app and load models before first request"""
+    print("Initializing Flask App and Loading Models...")
+    load_model()
+
+# Ensure models are loaded during startup (useful for Gunicorn/WSGI)
+with app.app_context():
+    init_app()
+
+
 # In-memory stores
 audit_log = []
 review_queue = []

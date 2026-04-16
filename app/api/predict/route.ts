@@ -13,7 +13,14 @@ export async function POST(request: Request) {
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    let data;
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Backend returned non-JSON response: ${res.status} ${text.substring(0, 100)}`);
+    }
 
     if (!res.ok) {
       return Response.json(data, { status: res.status });
@@ -45,11 +52,12 @@ export async function POST(request: Request) {
     }
 
     return Response.json(data, { status: res.status });
-  } catch {
+  } catch (err: any) {
+    console.error("Prediction API Error:", err);
     return Response.json(
       {
-        error:
-          "Failed to connect to ML prediction service. Ensure the Python server is running on port 5000.",
+        error: `ML API Error: ${err.message}`, 
+        details: "If you deployed on Render, verify the service is running and the URL is correct."
       },
       { status: 503 }
     );
