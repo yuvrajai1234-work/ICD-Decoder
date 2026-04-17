@@ -479,7 +479,7 @@ if __name__ == '__main__':
         print("Starting ICD Decoder API Server...")
         # Get port from environment variable for Render/Heroku compatibility
         port = int(os.environ.get('PORT', 5000))
-        app.run(host='0.0.0.0', port=port, debug=True)
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
     else:
         print("ERROR: Could not load model. Run train_model.py first.")
         import sys
