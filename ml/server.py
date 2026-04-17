@@ -29,9 +29,6 @@ def init_app():
     print("Initializing Flask App and Loading Models...")
     load_model()
 
-# Ensure models are loaded during startup (useful for Gunicorn/WSGI)
-with app.app_context():
-    init_app()
 
 
 # In-memory stores
@@ -471,6 +468,10 @@ def health():
         "timestamp": datetime.now().isoformat()
     })
 
+
+# Ensure models are loaded during startup (useful for Gunicorn/WSGI)
+with app.app_context():
+    init_app()
 
 if __name__ == '__main__':
     print("Loading model...")
