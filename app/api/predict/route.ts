@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 
 const ML_API = process.env.ML_API_URL || "http://localhost:5000";
 
+// Allow up to 60 seconds for Render's cold start to finish
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
